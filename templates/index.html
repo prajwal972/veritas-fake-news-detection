@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Veritas — Fake News Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #080a0d;
+  --bg2:        #0d1117;
+  --surface:    #111620;
+  --surface2:   #161d2a;
+  --surface3:   #1c2535;
+  --border:     #1e2a3a;
+  --border2:    #263347;
+  --text:       #c9d5e0;
+  --text-dim:   #4a5a70;
+  --text-mid:   #7a90a8;
+  --accent:     #3b82f6;
+  --accent-dim: rgba(59,130,246,0.1);
+  --accent-border: rgba(59,130,246,0.3);
+  --red:        #dc4f4f;
+  --red-dim:    rgba(220,79,79,0.08);
+  --red-border: rgba(220,79,79,0.25);
+  --green:      #3d9e6e;
+  --green-dim:  rgba(61,158,110,0.08);
+  --green-border: rgba(61,158,110,0.25);
+  --yellow:     #c9933a;
+  --yellow-dim: rgba(201,147,58,0.08);
+  --mono:       'IBM Plex Mono', monospace;
+  --sans:       'IBM Plex Sans', sans-serif;
+  --sidebar-w: 260px;
+  --header-h:  52px;
+}
+
+html { font-size: 13px; scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+header {
+  height: var(--header-h);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 200;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.logo-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.logo-wordmark {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.logo-name {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.logo-sub {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: blink 2.5s ease-in-out infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.model-tag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--accent);
+  padding: 3px 8px;
+  border: 1px solid var(--accent-border);
+  border-radius: 3px;
+  background: var(--accent-dim);
+  letter-spacing: 1px;
+}
+
+.layout {
+  display: flex;
+  flex: 1;
+  padding-top: var(--header-h);
+}
+
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: var(--header-h);
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-section:last-child { border-bottom: none; }
+
+.sidebar-label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-mid);
+  font-size: 0.82rem;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+}
+
+.nav-item:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--accent-dim);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.nav-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.nav-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.stat-mini {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-mini:last-child { border-bottom: none; }
+.sm-key { color: var(--text-dim); }
+.sm-val { font-family: var(--mono); font-size: 0.72rem; color: var(--text); }
+
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.hist-item:last-child { border-bottom: none; }
+.hist-item:hover { opacity: 0.7; }
+
+.hist-badge {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  padding: 2px 5px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+.hist-badge.fake { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+.hist-badge.real { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+
+.hist-text { flex: 1; font-size: 0.72rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-conf { font-family: var(--mono); font-size: 0.62rem; color: var(--text-dim); }
+
+.empty-msg {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: var(--sidebar-w);
+  padding: 24px;
+  min-height: calc(100vh - var(--header-h));
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+.page-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.page-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.card-title {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.model-tab {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-mid);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  transition: all 0.15s;
+  line-height: 1.4;
+}
+
+.model-tab:hover { border-color: var(--border2); color: var(--text); }
+
+.model-tab.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--text);
+}
+
+.tab-name {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  display: block;
+  margin-bottom: 3px;
+  letter-spacing: 0.5px;
+}
+
+.model-tab.active .tab-name { color: var(--accent); }
+
+.tab-acc {
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: block;
+}
+
+.tab-speed {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 1px;
+}
+
+.field-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+input[type="password"],
+input[type="text"] {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 8px 11px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input:focus { border-color: var(--accent); }
+input::placeholder { color: var(--text-dim); }
+
+.btn-xs {
+  padding: 7px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  color: var(--text-mid);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.btn-xs:hover { border-color: var(--accent); color: var(--accent); }
+
+.textarea-wrap { position: relative; }
+
+textarea {
+  width: 100%;
+  min-height: 160px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  line-height: 1.65;
+  padding: 11px 13px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+textarea:focus { border-color: var(--accent); }
+textarea::placeholder { color: var(--text-dim); }
+
+.char-count {
+  position: absolute;
+  bottom: 7px;
+  right: 10px;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+.btn-primary {
+  width: 100%;
+  margin-top: 11px;
+  padding: 11px;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  letter-spacing: 0.3px;
+}
+
+.btn-primary:hover { opacity: 0.85; }
+.btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.sec-note {
+  margin-top: 9px;
+  padding: 7px 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+
+.spinner-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(8,10,13,0.88);
+  border-radius: 6px;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.spinner-overlay.active { display: flex; }
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.result-section { display: none; }
+.result-section.visible { display: block; animation: fadeUp 0.3s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.verdict-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 5px;
+  margin-bottom: 16px;
+  border: 1px solid;
+}
+
+.verdict-row.fake { background: var(--red-dim); border-color: var(--red-border); }
+.verdict-row.real { background: var(--green-dim); border-color: var(--green-border); }
+
+.verdict-left .v-sub {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.verdict-label {
+  font-family: var(--mono);
+  font-size: 1.2rem;
+  font-weight: 500;
+  letter-spacing: 4px;
+}
+
+.verdict-row.fake  .verdict-label { color: var(--red); }
+.verdict-row.real .verdict-label { color: var(--green); }
+
+.verdict-right { text-align: right; }
+
+.conf-num {
+  font-family: var(--mono);
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1;
+  display: block;
+}
+
+.conf-sub {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+
+.sec-title {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  margin-top: 18px;
+}
+
+.prob-row { margin-bottom: 9px; }
+
+.prob-header {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.prob-track {
+  height: 3px;
+  background: var(--surface2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.prob-fill { height: 100%; border-radius: 2px; width: 0; transition: width 0.8s ease; }
+.prob-fill.fake { background: var(--red); }
+.prob-fill.real { background: var(--green); }
+
+.risk-row { margin-bottom: 4px; }
+
+.risk-header {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+
+.risk-track { height: 5px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+
+.risk-fill {
+  height: 100%;
+  border-radius: 3px;
+  width: 0;
+  transition: width 1s ease;
+  background: linear-gradient(90deg, var(--green) 0%, var(--yellow) 55%, var(--red) 100%);
+}
+
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.feat-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 9px 10px;
+}
+
+.feat-key {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.feat-val {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.analysis-list { display: flex; flex-direction: column; }
+
+.analysis-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--text-mid);
+  line-height: 1.5;
+}
+
+.analysis-row:last-child { border-bottom: none; }
+
+.a-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.sus-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.sus-tag {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+
+.sus-tag.high   { color: var(--red);    border-color: var(--red-border);    background: var(--red-dim); }
+.sus-tag.medium { color: var(--yellow); border-color: rgba(201,147,58,0.3); background: var(--yellow-dim); }
+.sus-tag.low    { color: var(--text-mid); border-color: var(--border2);     background: var(--surface2); }
+
+.hl-box {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 13px;
+  line-height: 1.9;
+  font-size: 0.82rem;
+  max-height: 160px;
+  overflow-y: auto;
+  color: var(--text-mid);
+}
+
+.hl-high   { background: rgba(220,79,79,0.15);  color: var(--red);    padding: 1px 3px; border-radius: 2px; }
+.hl-medium { background: rgba(201,147,58,0.12); color: var(--yellow); padding: 1px 3px; border-radius: 2px; }
+.hl-low    { background: rgba(255,255,255,0.04); color: var(--text-mid); padding: 1px 3px; border-radius: 2px; }
+
+.proc-time {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  text-align: right;
+  margin-top: 10px;
+}
+
+.discourse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.disc-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 11px 12px;
+}
+
+.disc-key {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.disc-val {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 500;
+  display: block;
+}
+
+.disc-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  display: block;
+  margin-top: 2px;
+}
+
+.mini-bar-track {
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 0.8s ease;
+}
+
+.market-section {}
+
+.market-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.impact-badge {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 3px;
+  letter-spacing: 1px;
+}
+
+.impact-badge.HIGH     { background: rgba(220,79,79,0.15); color: var(--red); border: 1px solid var(--red-border); }
+.impact-badge.MODERATE { background: var(--yellow-dim); color: var(--yellow); border: 1px solid rgba(201,147,58,0.3); }
+.impact-badge.LOW      { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border); }
+.impact-badge.MINIMAL  { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+
+.topic-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+
+.topic-tag {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+}
+
+.region-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.region-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 12px;
+}
+
+.region-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.region-name {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.dir-tag {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+}
+
+.dir-tag.BEARISH { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+.dir-tag.BULLISH { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+.dir-tag.NEUTRAL { background: var(--surface3); color: var(--text-dim); border: 1px solid var(--border); }
+
+.region-score-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.region-score-track {
+  flex: 1;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.region-score-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--red);
+  transition: width 0.8s ease;
+}
+
+.region-score-num {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.region-desc {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.region-markets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.market-tag {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  padding: 2px 5px;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  color: var(--text-dim);
+}
+
+.vol-tag {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 6px;
+}
+
+.vol-tag.HIGH     { background: var(--red-dim); color: var(--red); }
+.vol-tag.MODERATE { background: var(--yellow-dim); color: var(--yellow); }
+.vol-tag.LOW      { background: var(--surface3); color: var(--text-dim); }
+
+.disclaimer {
+  margin-top: 12px;
+  padding: 7px 11px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2px;
+}
+
+.ex-btn {
+  display: block;
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 9px 11px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-mid);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  transition: all 0.15s;
+  margin-bottom: 7px;
+}
+
+.ex-btn:last-child { margin-bottom: 0; }
+.ex-btn:hover { border-color: var(--border2); color: var(--text); }
+
+.ex-type {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.ex-type.fake-t { color: var(--red); }
+.ex-type.real-t { color: var(--green); }
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-mid);
+}
+
+.legend-row:last-child { border-bottom: none; }
+
+.legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.ls-h { background: var(--red); }
+.ls-m { background: var(--yellow); }
+.ls-l { background: var(--border2); }
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 9px 14px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  z-index: 9999;
+  transform: translateY(50px);
+  opacity: 0;
+  transition: all 0.22s ease;
+  border: 1px solid;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--green-dim); border-color: var(--green-border); color: var(--green); }
+.toast.error   { background: var(--red-dim);   border-color: var(--red-border);   color: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3L28 8.5V17C28 23.5 22.5 28.5 16 30C9.5 28.5 4 23.5 4 17V8.5L16 3Z" fill="rgba(59,130,246,0.1)" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M11 16.5L14.5 20L21 13" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="11" y1="10" x2="21" y2="10" stroke="rgba(59,130,246,0.4)" stroke-width="1" stroke-linecap="round"/>
+          <line x1="11" y1="13" x2="21" y2="13" stroke="rgba(59,130,246,0.25)" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="logo-wordmark">
+        <span class="logo-name">Veritas</span>
+        <span class="logo-sub">Fake News Detection</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        <span>System Online</span>
+      </div>
+      <div class="model-tag" id="modelTag">LR</div>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <div class="nav-item active" onclick="showPage('analyze', this)">
+        <div class="nav-icon"><svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4"/><line x1="9.5" y1="9.5" x2="13" y2="13"/></svg></div>
+        Analyze Article
+      </div>
+      <div class="nav-item" onclick="showPage('discourse', this)">
+        <div class="nav-icon"><svg viewBox="0 0 14 14"><rect x="1" y="3" width="12" height="2" rx="1"/><rect x="1" y="7" width="9" height="2" rx="1"/><rect x="1" y="11" width="6" height="2" rx="1"/></svg></div>
+        Discourse Analysis
+      </div>
+      <div class="nav-item" onclick="showPage('market', this)">
+        <div class="nav-icon"><svg viewBox="0 0 14 14"><polyline points="1,11 4,6 7,9 10,3 13,7"/></svg></div>
+        Market Impact
+      </div>
+      <div class="nav-item" onclick="showPage('features', this)">
+        <div class="nav-icon"><svg viewBox="0 0 14 14"><rect x="1" y="1" width="5" height="5" rx="1"/><rect x="8" y="1" width="5" height="5" rx="1"/><rect x="1" y="8" width="5" height="5" rx="1"/><rect x="8" y="8" width="5" height="5" rx="1"/></svg></div>
+        Feature Signals
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Session</div>
+      <div class="stat-mini"><span class="sm-key">Total Analyses</span><span class="sm-val" id="sTotal">0</span></div>
+      <div class="stat-mini"><span class="sm-key">Fake Detected</span><span class="sm-val" id="sFake" style="color:var(--red)">0</span></div>
+      <div class="stat-mini"><span class="sm-key">Real Detected</span><span class="sm-val" id="sReal" style="color:var(--green)">0</span></div>
+      <div class="stat-mini"><span class="sm-key">Avg Confidence</span><span class="sm-val" id="sConf">—</span></div>
+      <div class="stat-mini"><span class="sm-key">Active Model</span><span class="sm-val" id="sModel" style="color:var(--accent)">LR</span></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">History</div>
+      <div id="histList"><div class="empty-msg">No analyses yet</div></div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+
+    <div class="page active" id="page-analyze">
+      <div class="page-title">Article Analysis</div>
+      <div class="page-subtitle">Multi-model NLP classification with discourse, linguistic, and market impact analysis</div>
+
+      <div class="card" style="position:relative;">
+        <div class="spinner-overlay" id="spinnerOverlay">
+          <div class="spinner"></div>
+          <div class="spinner-label" id="spinnerLabel">Analyzing...</div>
+        </div>
+
+        <div class="card-title">Detection Model</div>
+        <div class="model-tabs">
+          <button class="model-tab active" data-model="logistic_regression" onclick="selectModel(this)">
+            <span class="tab-name">Logistic Regression</span>
+            <span class="tab-acc">~87% accuracy</span>
+            <span class="tab-speed">Fast</span>
+          </button>
+          <button class="model-tab" data-model="naive_bayes" onclick="selectModel(this)">
+            <span class="tab-name">Naive Bayes</span>
+            <span class="tab-acc">~83% accuracy</span>
+            <span class="tab-speed">Fastest</span>
+          </button>
+          <button class="model-tab" data-model="lstm" onclick="selectModel(this)">
+            <span class="tab-name">LSTM Ensemble</span>
+            <span class="tab-acc">~91% accuracy</span>
+            <span class="tab-speed">Moderate</span>
+          </button>
+        </div>
+
+        <label class="field-label">API Key</label>
+        <div class="input-row">
+          <input type="password" id="apiKey" value="demo-key-2024" placeholder="Enter API key"/>
+          <button class="btn-xs" onclick="saveKey()">Save</button>
+        </div>
+
+        <label class="field-label">Article Text</label>
+        <div class="textarea-wrap">
+          <textarea id="articleText" placeholder="Paste a news article or headline here for analysis..." maxlength="10000"></textarea>
+          <div class="char-count" id="charCount">0 / 10000</div>
+        </div>
+
+        <button class="btn-primary" id="analyzeBtn" onclick="analyze()">Analyze Article</button>
+
+        <div class="sec-note">Rate limited — Audit logged — API key required — Input validated (20–10,000 chars)</div>
+      </div>
+
+      <div class="result-section" id="resultSection">
+
+        <div class="card">
+          <div class="card-title">Classification Result</div>
+
+          <div class="verdict-row" id="verdictRow">
+            <div class="verdict-left">
+              <div class="v-sub">Prediction</div>
+              <div class="verdict-label" id="verdictLabel"></div>
+            </div>
+            <div class="verdict-right">
+              <span class="conf-num" id="confNum"></span>
+              <span class="conf-sub">Confidence</span>
+            </div>
+          </div>
+
+          <div class="sec-title">Probability Breakdown</div>
+          <div class="prob-row">
+            <div class="prob-header"><span>Fake Probability</span><span id="fakeProbTxt"></span></div>
+            <div class="prob-track"><div class="prob-fill fake" id="fakeProbBar"></div></div>
+          </div>
+          <div class="prob-row">
+            <div class="prob-header"><span>Real Probability</span><span id="realProbTxt"></span></div>
+            <div class="prob-track"><div class="prob-fill real" id="realProbBar"></div></div>
+          </div>
+
+          <div class="sec-title">Risk Score</div>
+          <div class="risk-row">
+            <div class="risk-header"><span>Low</span><span id="riskTxt"></span><span>High</span></div>
+            <div class="risk-track"><div class="risk-fill" id="riskBar"></div></div>
+          </div>
+
+          <div class="sec-title">Analysis Points</div>
+          <div class="analysis-list" id="analysisList"></div>
+
+          <div class="sec-title">Suspicious Signals</div>
+          <div class="sus-tags" id="susTags"></div>
+
+          <div class="sec-title">Annotated Text</div>
+          <div class="hl-box" id="hlBox"></div>
+
+          <div class="proc-time" id="procTime"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Quick Examples</div>
+          <button class="ex-btn" onclick="loadEx('fake')">
+            <span class="ex-type fake-t">Fake Article</span>
+            Load sensationalist news example
+          </button>
+          <button class="ex-btn" onclick="loadEx('real')">
+            <span class="ex-type real-t">Real Article</span>
+            Load factual news example
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Highlight Legend</div>
+          <div class="legend-row"><div class="legend-swatch ls-h"></div><span>High-risk sensationalist word</span></div>
+          <div class="legend-row"><div class="legend-swatch ls-m"></div><span>Medium-risk vague claim</span></div>
+          <div class="legend-row"><div class="legend-swatch ls-l"></div><span>Low-risk ambiguous term</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="page" id="page-discourse">
+      <div class="page-title">Discourse Analysis</div>
+      <div class="page-subtitle">Linguistic and structural analysis based on thematic coherence, stance drift, epistemic hedging, and sarcasm detection</div>
+
+      <div class="card" id="discourseCard">
+        <div class="card-title">Discourse Features</div>
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);text-align:center;padding:40px 0;">Run an analysis first to see discourse results</div>
+      </div>
+    </div>
+
+    <div class="page" id="page-market">
+      <div class="page-title">Market Impact Analysis</div>
+      <div class="page-subtitle">Estimated financial and geopolitical impact across global markets — for educational purposes only</div>
+
+      <div class="card" id="marketCard">
+        <div class="card-title">Global Market Impact</div>
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);text-align:center;padding:40px 0;">Run an analysis first to see market impact</div>
+      </div>
+    </div>
+
+    <div class="page" id="page-features">
+      <div class="page-title">Feature Signals</div>
+      <div class="page-subtitle">Raw extracted features from the analyzed text including statistical and linguistic signals</div>
+
+      <div class="card" id="featuresCard">
+        <div class="card-title">Extracted Features</div>
+        <div style="font-family:var(--mono);font-size:0.65rem;color:var(--text-dim);text-align:center;padding:40px 0;">Run an analysis first to see feature signals</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var currentModel = 'logistic_regression';
+var apiKey = 'demo-key-2024';
+var session = { total: 0, fake: 0, real: 0, confSum: 0, history: [] };
+var lastResult = null;
+
+var MODEL_TAGS = { logistic_regression: 'LR', naive_bayes: 'NB', lstm: 'LSTM' };
+
+var EXAMPLES = {
+  fake: 'BOMBSHELL EXPOSED: Government scientists have been secretly hiding the cure for cancer for decades because they don\'t want you to know the truth! Anonymous insiders have leaked shocking documents proving that deep state operatives are paying mainstream media billions to cover up this massive hoax. Wake up, sheeple! They are putting chemicals in the water supply to control your mind. Share this before they delete it. The radical elites running our government will stop at nothing to silence the truth! This miracle discovery will heal everything overnight and they banned it because it threatens their profits.',
+  real: 'The Federal Reserve announced on Wednesday that it would maintain its benchmark interest rate at the current level, citing steady progress toward its two percent inflation target. Federal Reserve Chair Jerome Powell stated at a press conference that policymakers would continue monitoring incoming economic data before making any adjustments to monetary policy. The decision was unanimous among Federal Open Market Committee members. Economists polled by Reuters had widely anticipated the hold, noting that recent labor market data has been stronger than expected, which could influence future decisions regarding rate cuts later in the year.'
+};
+
+document.getElementById('articleText').addEventListener('input', function() {
+  document.getElementById('charCount').textContent = this.value.length + ' / 10000';
+});
+
+document.getElementById('articleText').addEventListener('keydown', function(e) {
+  if (e.ctrlKey && e.key === 'Enter') analyze();
+});
+
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+function selectModel(btn) {
+  document.querySelectorAll('.model-tab').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  currentModel = btn.dataset.model;
+  var tag = MODEL_TAGS[currentModel] || 'LR';
+  document.getElementById('modelTag').textContent = tag;
+  document.getElementById('sModel').textContent = tag;
+}
+
+function saveKey() {
+  var v = document.getElementById('apiKey').value.trim();
+  if (v) { apiKey = v; showToast('API key saved', 'success'); }
+}
+
+function loadEx(type) {
+  var text = EXAMPLES[type];
+  document.getElementById('articleText').value = text;
+  document.getElementById('charCount').textContent = text.length + ' / 10000';
+}
+
+var loadingPhrases = ['Tokenizing text...', 'Extracting TF-IDF features...', 'Running classifier...', 'Computing probabilities...', 'Analyzing discourse...', 'Computing market impact...'];
+var loadingIdx = 0;
+var loadingTimer = null;
+
+function startLoading() {
+  document.getElementById('spinnerOverlay').classList.add('active');
+  document.getElementById('analyzeBtn').disabled = true;
+  loadingIdx = 0;
+  document.getElementById('spinnerLabel').textContent = loadingPhrases[0];
+  loadingTimer = setInterval(function() {
+    loadingIdx = (loadingIdx + 1) % loadingPhrases.length;
+    document.getElementById('spinnerLabel').textContent = loadingPhrases[loadingIdx];
+  }, 700);
+}
+
+function stopLoading() {
+  clearInterval(loadingTimer);
+  document.getElementById('spinnerOverlay').classList.remove('active');
+  document.getElementById('analyzeBtn').disabled = false;
+}
+
+async function analyze() {
+  var text = document.getElementById('articleText').value.trim();
+  if (!text || text.length < 20) { showToast('Enter at least 20 characters', 'error'); return; }
+
+  startLoading();
+
+  try {
+    var res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+      body: JSON.stringify({ text: text, model: currentModel })
+    });
+
+    stopLoading();
+    var data = await res.json();
+
+    if (!res.ok) { showToast(data.error || 'Analysis failed', 'error'); return; }
+
+    lastResult = data;
+    renderResult(data);
+    renderDiscourse(data.discourse_analysis);
+    renderMarket(data.market_impact);
+    renderFeatures(data.features);
+    updateSession(data);
+    addHistory(text, data);
+    showToast('Analysis complete — ' + data.prediction, data.prediction === 'FAKE' ? 'error' : 'success');
+
+  } catch (err) {
+    stopLoading();
+    var demo = demoFallback(text);
+    lastResult = demo;
+    renderResult(demo);
+    renderDiscourse(demo.discourse_analysis);
+    renderMarket(demo.market_impact);
+    renderFeatures(demo.features);
+    updateSession(demo);
+    addHistory(text, demo);
+    showToast('Backend offline — demo mode active', 'error');
+  }
+}
+
+function demoFallback(text) {
+  var fakeWords = ['shocking', 'bombshell', 'exposed', 'hoax', 'cover-up', 'secret', 'conspiracy', 'wake up', 'share this', 'mainstream media', 'deep state', 'miracle'];
+  var lower = text.toLowerCase();
+  var fakeScore = 0;
+  var susHigh = [];
+  fakeWords.forEach(function(w) { if (lower.indexOf(w) !== -1) { fakeScore += 10; susHigh.push(w); } });
+  var caps = (text.match(/[A-Z]/g) || []).length / Math.max(text.length, 1);
+  var excl = (text.match(/!/g) || []).length;
+  fakeScore += Math.min(caps * 40, 20) + Math.min(excl * 5, 20);
+  fakeScore = Math.min(fakeScore, 95);
+  var fakePct = Math.max(30, fakeScore);
+  var realPct = 100 - fakePct;
+  var pred = fakePct > 50 ? 'FAKE' : 'REAL';
+  var conf = Math.max(fakePct, realPct);
+  var words = text.split(/\s+/);
+  var ttr = new Set(words.map(function(w) { return w.toLowerCase(); })).size / Math.max(words.length, 1);
+  var sents = text.split(/[.!?]+/).filter(function(s) { return s.trim().length > 5; });
+  var highlighted = text.split(/(\s+)/).map(function(t) {
+    var wl = t.toLowerCase().replace(/[.,!?;:"']/g, '');
+    return { token: t, highlight: susHigh.indexOf(wl) !== -1 ? 'high' : null };
+  });
+  var discourse = {
+    thematic_coherence_score: Math.max(10, 80 - fakePct),
+    thematic_coherence_label: fakePct > 60 ? 'Low' : 'Medium',
+    stance_drift_score: Math.min(fakePct * 0.6, 100),
+    stance_drift_label: fakePct > 60 ? 'High drift' : 'Stable',
+    epistemic_hedging_score: Math.max(5, 50 - fakePct * 0.4),
+    hedging_label: fakePct > 60 ? 'Assertive / Unhedged' : 'Partially hedged',
+    lexical_diversity_score: Math.round(ttr * 100),
+    sarcasm_score: Math.min(excl * 10, 80),
+    punctuation_intensity: Math.min((excl * 3 + caps * 20) / Math.max(text.length, 1) * 1000, 100)
+  };
+  var market = {
+    detected_topics: [{ topic: 'general', relevance: 0.5 }],
+    impact_level: fakePct > 70 ? 'HIGH' : fakePct > 50 ? 'MODERATE' : 'LOW',
+    overall_impact_score: Math.round(fakePct * 0.6),
+    affected_regions: [
+      { region: 'USA', impact_level: 'MODERATE', impact_score: Math.round(fakePct * 0.5), direction: pred === 'FAKE' ? 'BEARISH' : 'NEUTRAL', volatility: 'MODERATE', markets: ['S&P 500', 'NASDAQ', 'USD/EUR'], sectors: ['Finance', 'Technology'], description: 'Demo mode — connect backend for full market analysis.' },
+      { region: 'Forex', impact_level: 'LOW', impact_score: Math.round(fakePct * 0.3), direction: 'NEUTRAL', volatility: 'LOW', markets: ['EUR/USD', 'GBP/USD', 'USD/JPY'], sectors: ['Carry Trade'], description: 'Demo mode — connect backend for full market analysis.' }
+    ],
+    disclaimer: 'Market impact is simulated analysis for educational purposes only. Not financial advice.'
+  };
+  return {
+    prediction: pred,
+    confidence: conf,
+    fake_probability: fakePct,
+    real_probability: realPct,
+    risk_score: Math.min(fakePct + 10, 100),
+    model_used: currentModel,
+    features: {
+      word_count: words.length,
+      sentence_count: sents.length,
+      cap_ratio: parseFloat(caps.toFixed(3)),
+      exclamations: excl,
+      questions: (text.match(/\?/g) || []).length,
+      urls: 0,
+      avg_word_len: parseFloat((words.reduce(function(a, w) { return a + w.length; }, 0) / Math.max(words.length, 1)).toFixed(2)),
+      suspicious_words: { high: susHigh, medium: [], low: [] },
+      hedge_count: 0,
+      sarcasm_signals: Math.floor(excl / 2),
+      thematic_coherence: parseFloat(Math.max(0.1, 0.8 - fakePct / 100).toFixed(3)),
+      stance_drift: parseFloat((fakePct / 50).toFixed(3)),
+      type_token_ratio: parseFloat(ttr.toFixed(3)),
+      punctuation_score: parseFloat(Math.min((excl * 3 + caps * 20) / Math.max(text.length, 1), 1).toFixed(3)),
+      epistemic_ratio: 0.01
+    },
+    highlighted_text: highlighted,
+    analysis: pred === 'FAKE'
+      ? ['Sensationalist language patterns detected', 'Multiple high-risk signal words found', 'High capitalization ratio identified']
+      : ['Neutral language detected', 'No major red flags found', 'Structured prose pattern observed'],
+    discourse_analysis: discourse,
+    market_impact: market,
+    processing_time_ms: 0,
+    timestamp: new Date().toISOString()
+  };
+}
+
+function renderResult(data) {
+  document.getElementById('resultSection').classList.add('visible');
+
+  var isFake = data.prediction === 'FAKE';
+  var vr = document.getElementById('verdictRow');
+  vr.className = 'verdict-row ' + (isFake ? 'fake' : 'real');
+  document.getElementById('verdictLabel').textContent = data.prediction;
+  document.getElementById('confNum').textContent = Math.round(data.confidence) + '%';
+
+  document.getElementById('fakeProbTxt').textContent = data.fake_probability.toFixed(1) + '%';
+  document.getElementById('realProbTxt').textContent = data.real_probability.toFixed(1) + '%';
+
+  setTimeout(function() {
+    document.getElementById('fakeProbBar').style.width = data.fake_probability + '%';
+    document.getElementById('realProbBar').style.width = data.real_probability + '%';
+    document.getElementById('riskBar').style.width = data.risk_score + '%';
+  }, 60);
+
+  document.getElementById('riskTxt').textContent = data.risk_score + ' / 100';
+
+  document.getElementById('analysisList').innerHTML = (data.analysis || []).map(function(a) {
+    return '<div class="analysis-row"><div class="a-dot"></div><span>' + esc(a) + '</span></div>';
+  }).join('');
+
+  var sus = data.features.suspicious_words || {};
+  var tags = [];
+  (sus.high || []).forEach(function(w) { tags.push('<span class="sus-tag high">' + esc(w) + '</span>'); });
+  (sus.medium || []).forEach(function(w) { tags.push('<span class="sus-tag medium">' + esc(w) + '</span>'); });
+  (sus.low || []).forEach(function(w) { tags.push('<span class="sus-tag low">' + esc(w) + '</span>'); });
+  document.getElementById('susTags').innerHTML = tags.length ? tags.join('') : '<span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);">No suspicious signals detected</span>';
+
+  var hl = data.highlighted_text || [];
+  document.getElementById('hlBox').innerHTML = hl.map(function(t) {
+    return t.highlight ? '<span class="hl-' + t.highlight + '">' + esc(t.token) + '</span>' : esc(t.token);
+  }).join('');
+
+  document.getElementById('procTime').textContent = data.processing_time_ms ? 'Processed in ' + data.processing_time_ms + 'ms' : '';
+}
+
+function renderDiscourse(d) {
+  if (!d) return;
+  var html = '<div class="card-title">Discourse & Linguistic Features</div>' +
+    '<div class="discourse-grid">';
+  var items = [
+    { key: 'Thematic Coherence', val: d.thematic_coherence_score + '%', label: d.thematic_coherence_label, bar: d.thematic_coherence_score },
+    { key: 'Stance Drift', val: d.stance_drift_score + '%', label: d.stance_drift_label, bar: d.stance_drift_score },
+    { key: 'Epistemic Hedging', val: d.epistemic_hedging_score + '%', label: d.hedging_label, bar: d.epistemic_hedging_score },
+    { key: 'Lexical Diversity', val: d.lexical_diversity_score + '%', label: d.lexical_diversity_score > 60 ? 'High' : d.lexical_diversity_score > 35 ? 'Medium' : 'Low', bar: d.lexical_diversity_score },
+    { key: 'Sarcasm Signals', val: d.sarcasm_score + '%', label: d.sarcasm_score > 50 ? 'Detected' : 'Minimal', bar: d.sarcasm_score },
+    { key: 'Punctuation Intensity', val: d.punctuation_intensity + '%', label: d.punctuation_intensity > 60 ? 'High' : 'Normal', bar: d.punctuation_intensity }
+  ];
+  items.forEach(function(item) {
+    html += '<div class="disc-card">' +
+      '<span class="disc-key">' + item.key + '</span>' +
+      '<span class="disc-val">' + item.val + '</span>' +
+      '<span class="disc-label">' + item.label + '</span>' +
+      '<div class="mini-bar-track"><div class="mini-bar-fill" style="width:' + Math.min(item.bar, 100) + '%"></div></div>' +
+      '</div>';
+  });
+  html += '</div>';
+  document.getElementById('discourseCard').innerHTML = html;
+}
+
+function renderMarket(m) {
+  if (!m) return;
+  var html = '<div class="card-title">Global Market Impact</div>' +
+    '<div class="market-header-row">' +
+    '<div style="display:flex;align-items:center;gap:8px;">' +
+    '<span style="font-size:0.78rem;color:var(--text-mid);">Overall Impact</span>' +
+    '<span class="impact-badge ' + m.impact_level + '">' + m.impact_level + '</span>' +
+    '<span style="font-family:var(--mono);font-size:0.7rem;color:var(--text-dim);">Score: ' + m.overall_impact_score + '/100</span>' +
+    '</div></div>';
+
+  if (m.detected_topics && m.detected_topics.length) {
+    html += '<div class="topic-tags">';
+    m.detected_topics.forEach(function(t) {
+      html += '<span class="topic-tag">' + t.topic.toUpperCase() + ' — ' + Math.round(t.relevance * 100) + '% relevance</span>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div class="region-grid">';
+  (m.affected_regions || []).forEach(function(r) {
+    html += '<div class="region-card">' +
+      '<div class="region-header">' +
+      '<span class="region-name">' + r.region + '</span>' +
+      '<div style="display:flex;align-items:center;gap:4px;">' +
+      '<span class="dir-tag ' + r.direction + '">' + r.direction + '</span>' +
+      '<span class="vol-tag ' + r.volatility + '">Vol: ' + r.volatility + '</span>' +
+      '</div></div>' +
+      '<div class="region-score-row">' +
+      '<div class="region-score-track"><div class="region-score-fill" style="width:' + Math.min(r.impact_score, 100) + '%"></div></div>' +
+      '<span class="region-score-num">' + r.impact_score + '</span>' +
+      '</div>' +
+      '<div class="region-desc">' + esc(r.description) + '</div>' +
+      '<div class="region-markets">';
+    (r.markets || []).slice(0, 4).forEach(function(mk) {
+      html += '<span class="market-tag">' + esc(mk) + '</span>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
+
+  if (m.disclaimer) {
+    html += '<div class="disclaimer">' + esc(m.disclaimer) + '</div>';
+  }
+
+  document.getElementById('marketCard').innerHTML = html;
+}
+
+function renderFeatures(f) {
+  if (!f) return;
+  var items = [
+    { key: 'Word Count', val: f.word_count },
+    { key: 'Sentence Count', val: f.sentence_count },
+    { key: 'Cap Ratio', val: (f.cap_ratio * 100).toFixed(1) + '%' },
+    { key: 'Exclamations', val: f.exclamations },
+    { key: 'Questions', val: f.questions !== undefined ? f.questions : '—' },
+    { key: 'URLs Found', val: f.urls !== undefined ? f.urls : '0' },
+    { key: 'Avg Word Len', val: f.avg_word_len },
+    { key: 'Hedge Count', val: f.hedge_count !== undefined ? f.hedge_count : '—' },
+    { key: 'Sarcasm Signals', val: f.sarcasm_signals !== undefined ? f.sarcasm_signals : '—' },
+    { key: 'Type-Token Ratio', val: f.type_token_ratio !== undefined ? f.type_token_ratio : '—' },
+    { key: 'Punctuation Score', val: f.punctuation_score !== undefined ? f.punctuation_score : '—' },
+    { key: 'Epistemic Ratio', val: f.epistemic_ratio !== undefined ? f.epistemic_ratio : '—' }
+  ];
+  var html = '<div class="card-title">Raw Feature Signals</div>' +
+    '<div class="feat-grid" style="grid-template-columns:repeat(4,1fr);">';
+  items.forEach(function(item) {
+    html += '<div class="feat-box"><span class="feat-key">' + item.key + '</span><span class="feat-val">' + item.val + '</span></div>';
+  });
+  html += '</div>';
+
+  var sus = f.suspicious_words || {};
+  var allSus = (sus.high || []).concat(sus.medium || []).concat(sus.low || []);
+  if (allSus.length) {
+    html += '<div style="margin-top:14px;">';
+    html += '<div style="font-family:var(--mono);font-size:0.58rem;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Suspicious Word Breakdown</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
+    [['high', sus.high || []], ['medium', sus.medium || []], ['low', sus.low || []]].forEach(function(pair) {
+      var level = pair[0], words = pair[1];
+      html += '<div class="disc-card">' +
+        '<span class="disc-key" style="color:' + (level === 'high' ? 'var(--red)' : level === 'medium' ? 'var(--yellow)' : 'var(--text-dim)') + '">' + level.toUpperCase() + ' RISK</span>' +
+        '<span class="disc-val">' + words.length + ' words</span>';
+      if (words.length) {
+        html += '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;">';
+        words.slice(0, 5).forEach(function(w) {
+          html += '<span class="sus-tag ' + level + '">' + esc(w) + '</span>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  document.getElementById('featuresCard').innerHTML = html;
+}
+
+function updateSession(data) {
+  session.total++;
+  session.confSum += data.confidence;
+  if (data.prediction === 'FAKE') session.fake++;
+  else session.real++;
+  document.getElementById('sTotal').textContent = session.total;
+  document.getElementById('sFake').textContent = session.fake;
+  document.getElementById('sReal').textContent = session.real;
+  document.getElementById('sConf').textContent = (session.confSum / session.total).toFixed(1) + '%';
+}
+
+function addHistory(text, data) {
+  session.history.unshift({ text: text, data: data });
+  if (session.history.length > 10) session.history.pop();
+  var list = document.getElementById('histList');
+  list.innerHTML = session.history.map(function(item, i) {
+    return '<div class="hist-item" onclick="reloadHist(' + i + ')">' +
+      '<div class="hist-badge ' + item.data.prediction.toLowerCase() + '">' + item.data.prediction + '</div>' +
+      '<div class="hist-text">' + esc(item.text.substring(0, 45)) + '...</div>' +
+      '<div class="hist-conf">' + Math.round(item.data.confidence) + '%</div>' +
+      '</div>';
+  }).join('');
+}
+
+function reloadHist(i) {
+  var item = session.history[i];
+  document.getElementById('articleText').value = item.text;
+  document.getElementById('charCount').textContent = item.text.length + ' / 10000';
+  lastResult = item.data;
+  renderResult(item.data);
+  renderDiscourse(item.data.discourse_analysis);
+  renderMarket(item.data.market_impact);
+  renderFeatures(item.data.features);
+}
+
+function esc(t) {
+  return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+</script>
+</body>
+</html>
