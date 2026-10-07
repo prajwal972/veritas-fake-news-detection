@@ -1,6 +1,5 @@
 <div align="center">
 
-# 🛡️ Veritas
 
 ### AI-Powered Fake News Detection System
 
